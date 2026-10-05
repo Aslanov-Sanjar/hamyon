@@ -1,0 +1,910 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Hamyon</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Telegram mavzusi ranglari bilan ishlaydi; brauzerda ochilsa zaxira ranglar ishlatiladi */
+:root{
+  --bg: var(--tg-theme-bg-color, #ffffff);
+  --bg2: var(--tg-theme-secondary-bg-color, #f1f3f6);
+  --fg: var(--tg-theme-text-color, #16181d);
+  --muted: var(--tg-theme-hint-color, #8a9099);
+  --accent: var(--tg-theme-button-color, #2a86d6);
+  --accent-fg: var(--tg-theme-button-text-color, #ffffff);
+  --link: var(--tg-theme-link-color, #2a86d6);
+  --danger: var(--tg-theme-destructive-text-color, #d9463b);
+  --income: #2e9e5b;
+  --expense: #d9463b;
+  --debt: #e08a1e;
+  --r: 14px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg2);color:var(--fg);
+  font:15px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent}
+.wrap{padding:12px 12px 96px;max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--bg);border-radius:var(--r);padding:14px}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+button{font:inherit;border:0;cursor:pointer;color:inherit;background:none}
+
+.month{display:flex;align-items:center;justify-content:space-between}
+.month b{font-size:17px}
+.month button{width:40px;height:40px;border-radius:50%;background:var(--bg2);font-size:20px;color:var(--link)}
+
+.bal-label{font-size:13px;color:var(--muted)}
+.bal{font-size:30px;font-weight:700;margin:2px 0 8px;letter-spacing:-.5px}
+.wallets{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;font-size:14px}
+.wallets div{display:flex;align-items:baseline;gap:6px}
+.wallets .wl{color:var(--muted);font-size:13px}
+.wallets b{font-size:15px}
+.paym{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.paym button{padding:11px 6px;border-radius:10px;background:var(--bg2);font-weight:600;font-size:14px;border:1.5px solid transparent}
+.paym button[aria-pressed="true"]{border-color:var(--accent);background:var(--bg);color:var(--accent)}
+.opbox .paym button{background:var(--bg)}
+.archbtn{display:flex;justify-content:space-between;align-items:center;width:100%;background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:12px;font-weight:600}
+.archbtn .muted{font-weight:400;font-size:13px}
+.note{background:var(--bg2);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted)}
+.pmtag{font-size:11px;color:var(--muted);font-weight:400;display:block;text-align:right}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pill{background:var(--bg2);border-radius:12px;padding:10px 12px;min-width:0}
+.pill small{display:block;color:var(--muted);font-size:12px}
+.pill span{font-weight:600;font-size:16px}
+.inc{color:var(--income)} .exp{color:var(--expense)}
+
+.tabs{display:flex;background:var(--bg2);border-radius:10px;padding:3px;gap:3px}
+.tabs button{flex:1;padding:8px 4px;border-radius:8px;font-size:14px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--bg);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* Toifalar ichidagi almashtirgich */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.seg button{padding:9px 4px;border-radius:10px;background:var(--bg2);font-size:14px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"][data-seg="exp"]{background:var(--expense);color:#fff}
+.seg button[aria-pressed="true"][data-seg="inc"]{background:var(--income);color:#fff}
+.seg button[aria-pressed="true"][data-seg="debt"]{background:var(--debt);color:#fff}
+.seg-total{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;gap:8px}
+.seg-total b{font-size:20px}
+
+/* Kartochkalar to'ri */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--bg2);border-radius:12px;padding:12px;min-width:0}
+.tile .ti{display:flex;align-items:center;gap:8px;min-width:0}
+.tile .ti span:first-child{font-size:20px;flex:none}
+.tile .ti span:last-child{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .tv{font-weight:600;font-size:16px}
+.tile .tp{font-size:12px;color:var(--muted)}
+.tile .bar{height:5px;border-radius:3px;background:var(--bg);overflow:hidden}
+.tile .bar i{display:block;height:100%;border-radius:3px}
+.tile.add{align-items:center;justify-content:center;border:1.5px dashed var(--muted);background:transparent;color:var(--link);font-weight:600;min-height:96px}
+.tile.zero{opacity:.7}
+
+.day{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 0 6px}
+.day:first-child{margin-top:0}
+.item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bg2);width:100%;text-align:left}
+.item:last-child{border-bottom:0}
+.ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:18px;background:var(--bg2);flex:none}
+.item .t{flex:1;min-width:0}
+.item .t div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t small{color:var(--muted);font-size:12px}
+.item .a{font-weight:600;white-space:nowrap}
+.empty{text-align:center;color:var(--muted);padding:24px 8px}
+
+.fab{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));max-width:536px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.fab button{padding:14px 4px;border-radius:12px;font-weight:600;color:#fff;font-size:14px}
+.b-inc{background:var(--income)} .b-exp{background:var(--expense)} .b-debt{background:var(--debt)}
+.dbt{color:var(--debt)}
+#toast{position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top,0px));max-width:536px;margin:0 auto;z-index:20;
+  background:var(--danger);color:#fff;padding:12px 14px;border-radius:12px;font-size:14px}
+.ver{text-align:center;font-size:11px;color:var(--muted)}
+
+/* Pastdan chiqadigan oynalar */
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:var(--bg);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));
+  display:flex;flex-direction:column;gap:12px;max-height:92vh;overflow:auto}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sheet-h b{font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sheet-h button{color:var(--link);flex:none}
+label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+input{font:inherit;color:var(--fg);background:var(--bg2);border:1px solid transparent;border-radius:10px;padding:12px;width:100%}
+input:focus{outline:none;border-color:var(--accent)}
+.big{font-size:24px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{padding:7px 11px;border-radius:18px;background:var(--bg2);font-size:13px}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.chips button.new{color:var(--link);border:1px dashed var(--link);background:transparent}
+.emojis{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.emojis button{font-size:20px;padding:6px 0;border-radius:8px}
+.emojis button[aria-pressed="true"]{background:var(--bg2);outline:2px solid var(--accent)}
+.save{background:var(--accent);color:var(--accent-fg);padding:14px;border-radius:12px;font-weight:600}
+.alt{background:var(--bg2);color:var(--link);padding:12px;border-radius:12px;font-weight:600}
+.del{color:var(--danger);padding:10px}
+.err{color:var(--danger);font-size:13px;min-height:1em}
+.lbl{font-size:13px;color:var(--muted);margin-bottom:6px}
+
+/* Qarzdor oynasi */
+.pbal{background:var(--bg2);border-radius:12px;padding:12px}
+.pbal b{font-size:22px;display:block}
+.opbox{background:var(--bg2);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.opbox input{background:var(--bg)}
+.opbox .chips button{background:var(--bg)}
+.opbox .chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.hist .item{padding:6px 0}
+.x{color:var(--danger);padding:4px 8px;font-size:18px;flex:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card month">
+    <button id="prev" aria-label="Oldingi oy">‹</button>
+    <b id="month-name"></b>
+    <button id="next" aria-label="Keyingi oy">›</button>
+  </div>
+
+  <div class="card">
+    <div class="bal-label">Oy qoldig'i</div>
+    <div class="bal num" id="bal">0 so'm</div>
+    <div class="wallets">
+      <div><span class="wl">💳 Plastik</span><b class="num" id="w-card">0</b></div>
+      <div><span class="wl">💵 Naqd</span><b class="num" id="w-cash">0</b></div>
+    </div>
+    <div class="row2">
+      <div class="pill"><small>Daromad</small><span class="num inc" id="sum-inc">0</span></div>
+      <div class="pill"><small>Xarajat</small><span class="num exp" id="sum-exp">0</span></div>
+    </div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="list" aria-selected="true">Amallar</button>
+    <button role="tab" data-tab="cats" aria-selected="false">Toifalar</button>
+  </div>
+
+  <div class="card" id="view-list"></div>
+  <div class="card" id="view-cats" hidden>
+    <div class="seg">
+      <button data-seg="exp" aria-pressed="true">Xarajatlar</button>
+      <button data-seg="inc" aria-pressed="false">Daromadlar</button>
+      <button data-seg="debt" aria-pressed="false">Qarzlar</button>
+    </div>
+    <div id="seg-body"></div>
+  </div>
+  <button class="alt" id="send-now" hidden>📩 Bugungi hisobotni botga yuborish</button>
+  <div class="ver" id="ver">Hamyon · versiya 8</div>
+</div>
+
+<div class="fab" id="fab-money">
+  <button class="b-inc" data-add="inc">+ Daromad</button>
+  <button class="b-exp" data-add="exp">− Xarajat</button>
+  <button class="b-debt" id="add-debt">⇄ Qarz</button>
+</div>
+
+<!-- Arxiv: ilovadan oldingi qarzlar -->
+<div class="sheet-bg" id="asheet" hidden>
+  <form class="sheet" id="aform" autocomplete="off">
+    <div class="sheet-h"><b>🗄 Arxiv — eski qarzlar</b><button type="button" id="a-close">Yopish</button></div>
+    <div class="note">Bu yerga ilovadan oldin olingan yoki berilgan qarzlarni kiriting. Ular qarzdor hisobida ko'rinadi, lekin plastik, naqd va oy qoldig'iga qo'shilmaydi. Keyin qarzni qaytarsangiz, oddiy "Qarz" tugmasi orqali yozasiz, o'shanda pulingizdan ayriladi.</div>
+    <div><div class="lbl">Kim bilan</div><div class="chips" id="a-people"></div></div>
+    <label id="a-newname-l" hidden>Yangi ism<input id="a-newname" maxlength="30" placeholder="Masalan: Dilshod"></label>
+    <div><div class="lbl">Qanday qarz</div><div class="chips" id="a-ops">
+      <button type="button" data-aop="take">Men qarz olganman</button>
+      <button type="button" data-aop="give">Men qarz berganman</button>
+    </div></div>
+    <label>Qolgan qarz summasi (so'm)<input id="a-amount" class="big money" inputmode="numeric" placeholder="0"></label>
+    <label>Qachon olingan / berilgan<input id="a-date" type="date"></label>
+    <label>Izoh<input id="a-note" maxlength="60" placeholder="Ixtiyoriy"></label>
+    <div class="err" id="a-err"></div>
+    <button class="save" type="submit">Arxivga qo'shish</button>
+    <div class="hist" id="a-list"></div>
+  </form>
+</div>
+
+<!-- Tezkor qarz yozuvi -->
+<div class="sheet-bg" id="qsheet" hidden>
+  <form class="sheet" id="qform" autocomplete="off">
+    <div class="sheet-h"><b>Qarz yozish</b><button type="button" id="q-close">Yopish</button></div>
+    <div><div class="lbl">Kim bilan</div><div class="chips" id="q-people"></div></div>
+    <div><div class="lbl">Nima bo'ldi</div><div class="chips" id="q-ops">
+      <button type="button" data-qop="give">Qarz berdim</button>
+      <button type="button" data-qop="back_in">Menga qaytardi</button>
+      <button type="button" data-qop="take">Qarz oldim</button>
+      <button type="button" data-qop="back_out">Men qaytardim</button>
+    </div></div>
+    <label>Summa (so'm)<input id="q-amount" class="big money" inputmode="numeric" placeholder="0"></label>
+    <div class="paym" data-pm-for="q"><button type="button" data-pm="k">💳 Plastik</button><button type="button" data-pm="c">💵 Naqd</button></div>
+    <label>Sana<input id="q-date" type="date"></label>
+    <label>Izoh<input id="q-note" maxlength="60" placeholder="Ixtiyoriy"></label>
+    <div class="err" id="q-err"></div>
+    <button class="save" type="submit">Saqlash</button>
+  </form>
+</div>
+
+<!-- Daromad / xarajat yozuvi -->
+<div class="sheet-bg" id="sheet" hidden>
+  <form class="sheet" id="form" autocomplete="off">
+    <div class="sheet-h"><b id="f-title">Xarajat</b><button type="button" id="f-close">Yopish</button></div>
+    <label>Summa (so'm)<input id="f-amount" class="big money" inputmode="numeric" placeholder="0"></label>
+    <div class="paym" data-pm-for="f"><button type="button" data-pm="k">💳 Plastik</button><button type="button" data-pm="c">💵 Naqd</button></div>
+    <div><div class="lbl" id="f-cats-l">Toifa</div><div class="chips" id="f-cats"></div></div>
+    <label>Sana<input id="f-date" type="date"></label>
+    <label>Izoh<input id="f-note" maxlength="60" placeholder="Masalan: Korzinka"></label>
+    <div class="err" id="f-err"></div>
+    <button class="save" type="submit">Saqlash</button>
+    <button class="del" type="button" id="f-del" hidden>O'chirish</button>
+  </form>
+</div>
+
+<!-- Toifa / daromad kartochkasi -->
+<div class="sheet-bg" id="csheet" hidden>
+  <form class="sheet" id="cform" autocomplete="off">
+    <div class="sheet-h"><b id="c-title">Yangi toifa</b><button type="button" id="c-close">Yopish</button></div>
+    <label id="c-name-l">Nomi<input id="c-name" maxlength="30"></label>
+    <div><div class="lbl">Belgi</div><div class="emojis" id="c-icons"></div></div>
+    <div class="err" id="c-err"></div>
+    <button class="save" type="submit">Saqlash</button>
+    <button class="alt" type="button" id="c-addentry" hidden></button>
+    <button class="del" type="button" id="c-del" hidden>O'chirish</button>
+  </form>
+</div>
+
+<!-- Qarzdor -->
+<div class="sheet-bg" id="psheet" hidden>
+  <form class="sheet" id="pform" autocomplete="off">
+    <div class="sheet-h"><b id="p-title">Yangi qarzdor</b><button type="button" id="p-close">Yopish</button></div>
+    <label>Ismi<input id="p-name" maxlength="30" placeholder="Masalan: Abror"></label>
+    <div class="pbal" id="p-balbox" hidden><span class="muted" id="p-bal-l"></span><b class="num" id="p-bal"></b></div>
+    <div class="opbox">
+      <div class="lbl" style="margin:0" id="p-op-l">Qarz yozish (ixtiyoriy)</div>
+      <div class="chips" id="p-kinds">
+        <button type="button" data-op="give">Qarz berdim</button>
+        <button type="button" data-op="back_in">Menga qaytardi</button>
+        <button type="button" data-op="take">Qarz oldim</button>
+        <button type="button" data-op="back_out">Men qaytardim</button>
+      </div>
+      <input id="p-amount" class="big money" inputmode="numeric" placeholder="Summa">
+      <div class="paym" data-pm-for="p"><button type="button" data-pm="k">💳 Plastik</button><button type="button" data-pm="c">💵 Naqd</button></div>
+      <input id="p-opdate" type="date">
+      <input id="p-note" maxlength="60" placeholder="Izoh (ixtiyoriy)">
+    </div>
+    <div class="err" id="p-err"></div>
+    <button class="save" type="submit" id="p-save">Saqlash</button>
+    <div class="hist" id="p-hist"></div>
+    <button class="del" type="button" id="p-del" hidden>Qarzdorni o'chirish</button>
+  </form>
+</div>
+
+<script>
+(() => {
+  const tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { tg.ready(); tg.expand(); }
+
+  // Boshlang'ich toifalar — foydalanuvchi ularni o'zgartirishi, o'chirishi, yangisini qo'shishi mumkin
+  const DEFAULT_CATS = {
+    exp: [["food","🛒","Oziq-ovqat"],["home","🏠","Uy va kommunal"],["transport","🚕","Transport"],["edu","📚","Ta'lim"]],
+    inc: [["salary","💼","Oylik"]]
+  };
+  const ICONS = ["🛒","🍽","🏠","🚕","⛽","📱","💡","💊","👕","📚","🎓","🎉","🎁","👩‍🦳","👨‍🦳","👩","❤️","👶","🧒","🐾","🏋️","✈️","🚗","🔧","💼","🛠","💰","🏦","📈","🤝","🕌","📌"];
+  const COLORS = ["#2a86d6","#e08a1e","#8a5cd1","#2e9e5b","#d9463b","#1aa3a3","#c2518f","#6b7a8f","#b59a1b","#4f6bd8"];
+  const MONTHS = ["Yanvar","Fevral","Mart","Aprel","May","Iyun","Iyul","Avgust","Sentabr","Oktabr","Noyabr","Dekabr"];
+  const OPS = { give:{n:"Qarz berdim",s:1}, back_in:{n:"Menga qaytardi",s:-1}, take:{n:"Qarz oldim",s:-1}, back_out:{n:"Men qaytardim",s:1} };
+  // Eski versiyadagi toifa nomlari (eski yozuvlar to'g'ri ko'rinishi uchun)
+  const LEGACY = {food:["🛒","Oziq-ovqat"],cafe:["🍽","Kafe"],transport:["🚕","Transport"],home:["🏠","Uy va kommunal"],phone:["📱","Aloqa, internet"],health:["💊","Sog'liq"],clothes:["👕","Kiyim"],edu:["📚","Ta'lim"],fun:["🎉","Dam olish"],gift:["🎁","Sovg'alar"],other_e:["•","Boshqa"],salary:["💼","Oylik"],side:["🛠","Qo'shimcha ish"],gift_i:["🎁","Sovg'a"],other_i:["•","Boshqa"]};
+
+  // ---------- Saqlash: Telegram CloudStorage, brauzerda esa localStorage ----------
+  // Avval telefonning o'zida (darhol) saqlanadi, keyin orqa fonda Telegram bulutiga yuboriladi.
+  // Bulut javob bermasa ham ilova osilib qolmaydi.
+  let cloud = null;
+  try { if (tg && tg.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast("6.9")) cloud = tg.CloudStorage; } catch(_){}
+  const withTimeout = (fn, ms) => new Promise((res, rej) => {
+    const t = setTimeout(() => rej(new Error("timeout")), ms);
+    try { fn((e, v) => { clearTimeout(t); e ? rej(e) : res(v); }); } catch(e){ clearTimeout(t); rej(e); }
+  });
+  const cloudB = {
+    get: keys => withTimeout(cb => cloud.getItems(keys, cb), 5000).then(v => v || {}),
+    set: (k, v) => withTimeout(cb => cloud.setItem(k, v, cb), 8000),
+    del: keys => keys.length ? withTimeout(cb => cloud.removeItems(keys, cb), 8000) : Promise.resolve()
+  };
+  const mem = {}; // localStorage ishlamasa, xotirada saqlab turamiz
+  const ls = {
+    get(k){ if (k in mem) return mem[k]; try { return localStorage.getItem(k); } catch(_){ return null; } },
+    set(k,v){ try { localStorage.setItem(k, v); delete mem[k]; } catch(_){ mem[k] = v; } },
+    del(k){ delete mem[k]; try { localStorage.removeItem(k); } catch(_){} }
+  };
+  // Eski versiya brauzerda shu kalitlarda saqlagan edi
+  const legacyLocalB = {
+    get: async keys => { const o={}; for (const k of keys) o[k] = ls.get("hm_"+k) || ""; return o; }
+  };
+  const CHUNK = 4000; // bulutda bitta qiymat 4096 belgigacha
+  // Faqat ASCII belgilar (emoji va harflar \\uXXXX ko'rinishida) — limitdan oshib ketmasligi uchun
+  const toAscii = s => s.replace(/[\u0080-￿]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4,"0"));
+  async function readChunks(B, k){
+    const n = parseInt((await B.get(["n"+k]))["n"+k] || "0", 10);
+    if (!n) return null;
+    const keys = Array.from({length:n}, (_,i) => "m"+k+"_"+i);
+    const v = await B.get(keys);
+    return keys.map(x => v[x] || "").join("");
+  }
+  const dirty = k => ls.get("hm_dirty_"+k) === "1";
+  const syncing = {};
+  async function pushCloud(k){
+    if (!cloud) return;
+    if (syncing[k]) { syncing[k] = "again"; return; }
+    syncing[k] = true;
+    try {
+      const s = ls.get("hm_L_"+k) || "";
+      const parts = []; for (let i=0;i<s.length;i+=CHUNK) parts.push(s.slice(i,i+CHUNK));
+      const old = parseInt((await cloudB.get(["n"+k]))["n"+k] || "0", 10);
+      for (let i=0;i<parts.length;i++) await cloudB.set("m"+k+"_"+i, parts[i]);
+      await cloudB.set("n"+k, String(parts.length));
+      const extra=[]; for (let i=parts.length;i<old;i++) extra.push("m"+k+"_"+i);
+      await cloudB.del(extra);
+      if ((ls.get("hm_L_"+k) || "") === s) ls.del("hm_dirty_"+k);
+    } catch(_){ /* keyingi safar qayta urinamiz */ }
+    const again = syncing[k] === "again"; syncing[k] = false;
+    if (again || dirty(k)) setTimeout(() => pushCloud(k), again ? 0 : 15000);
+  }
+  async function loadRaw(k, def){
+    let s = null;
+    if (cloud && !dirty(k)) {
+      try { s = await readChunks(cloudB, k); if (s !== null) ls.set("hm_L_"+k, s); else s = ls.get("hm_L_"+k); }
+      catch(_){ s = ls.get("hm_L_"+k); }
+    } else {
+      s = ls.get("hm_L_"+k);
+      if (s === null && !cloud) s = await readChunks(legacyLocalB, k);
+      if (dirty(k)) pushCloud(k);
+    }
+    if (s === null) return def;
+    try { return JSON.parse(s); } catch(_){ return def; }
+  }
+  async function saveRaw(k, data){
+    const s = toAscii(JSON.stringify(data));
+    ls.set("hm_L_"+k, s);
+    if (cloud) { ls.set("hm_dirty_"+k, "1"); pushCloud(k); }
+  }
+  const ymKey = ym => ym.replace("-","");
+  const loadMonth = async ym => (await loadRaw(ymKey(ym), [])).map(r => ({id:r[0],type:r[1],amount:r[2],cat:r[3],date:r[4],note:r[5]||"",pm:r[6]||"c"}));
+  const saveMonth = (ym, list) => saveRaw(ymKey(ym), list.map(e => [e.id,e.type,e.amount,e.cat,e.date,e.note,e.pm]));
+  // Toifalar: {exp:[[id,belgi,nom,o'chirilgan]], inc:[...]}
+  const saveCats = () => saveRaw("cats", cats);
+  // Qarzdorlar: [[id, ism, [[id,sana,tur,summa,izoh], ...]]]
+  const savePeople = () => saveRaw("ppl", people.map(p => [p.id,p.name,p.ops]));
+
+  // ---------- Xatolarni ekranda ko'rsatish ----------
+  const toast = msg => {
+    let t = document.getElementById("toast");
+    if (!t){ t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+    t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(()=> t.hidden = true, 6000);
+  };
+  window.addEventListener("error", e => toast("Xato: " + (e.message || "noma'lum")));
+  window.addEventListener("unhandledrejection", e => toast("Xato: " + ((e.reason && e.reason.message) || e.reason || "noma'lum")));
+  // "Saqlash" tugmasi: bosilganda ham, Enter bosilganda ham ishlaydi; xato bo'lsa ko'rsatadi
+  function onSave(formId, fn){
+    const f = document.getElementById(formId);
+    let running = false;
+    const run = async e => {
+      e.preventDefault();
+      if (running) return; running = true;
+      try { await fn(e); } catch(err){ toast("Saqlanmadi: " + (err && err.message || err)); }
+      finally { running = false; }
+    };
+    f.addEventListener("submit", run);
+    f.querySelectorAll('button[type="submit"]').forEach(b => b.addEventListener("click", run));
+  }
+
+  // ---------- Yordamchilar ----------
+  const today = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+  const fmt = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g," ");
+  const num = v => +String(v).replace(/\D/g,"");
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const dmy = s => s ? (+s.slice(8))+" "+MONTHS[+s.slice(5,7)-1].toLowerCase()+(s.slice(0,4)!==today().slice(0,4)?" "+s.slice(0,4):"") : "";
+  const haptic = t => { try{ tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(t); }catch(_){} };
+  const newId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  document.querySelectorAll("input.money").forEach(inp => inp.addEventListener("input", e => {
+    const d = e.target.value.replace(/\D/g,"").slice(0,13);
+    e.target.value = d ? fmt(+d) : "";
+  }));
+  function armDelete(btn, label, action){
+    let armed = false;
+    btn.addEventListener("click", async () => {
+      if (!armed){ armed = true; btn.textContent = "Rostdan o'chirilsinmi? Yana bosing"; setTimeout(()=>{armed=false;btn.textContent=label;},3000); return; }
+      armed = false; btn.textContent = label; await action();
+    });
+  }
+
+  // ---------- Plastik / naqd tanlovi ----------
+  const pmSel = {};
+  const lastPm = () => ls.get("hm_lastpm") || "k";
+  function setPm(k, v){
+    pmSel[k] = v;
+    document.querySelectorAll(`[data-pm-for="${k}"] [data-pm]`).forEach(b => b.setAttribute("aria-pressed", b.dataset.pm===v));
+  }
+  const usePm = k => { const v = pmSel[k] || lastPm(); ls.set("hm_lastpm", v); return v; };
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-pm]"); if (!b) return;
+    setPm(b.closest("[data-pm-for]").dataset.pmFor, b.dataset.pm);
+  });
+  const pmLabel = v => v==="k" ? "💳 plastik" : v==="a" ? "🗄 arxiv" : "💵 naqd";
+
+  // ---------- Holat ----------
+  let ym = today().slice(0,7);
+  let entries = [], cats = {exp:[],inc:[]}, people = [];
+  let tab = "list", seg = "exp";
+
+  const catInfo = id => {
+    for (const t of ["exp","inc"]) for (const c of cats[t]) if (c[0]===id) return {ic:c[1], n:c[2]};
+    const l = LEGACY[id]; return l ? {ic:l[0], n:l[1]} : {ic:"•", n:"Boshqa"};
+  };
+  const liveCats = t => cats[t].filter(c => !c[3]);
+
+  function shiftMonth(d){
+    let [y,m] = ym.split("-").map(Number); m += d;
+    if (m<1){m=12;y--} if (m>12){m=1;y++}
+    ym = y+"-"+String(m).padStart(2,"0");
+    open();
+  }
+  async function open(){
+    const [y,m] = ym.split("-").map(Number);
+    $("month-name").textContent = MONTHS[m-1]+" "+y;
+    $("view-list").innerHTML = '<div class="empty">Yuklanmoqda…</div>';
+    const want = ym; const list = await loadMonth(ym);
+    if (want !== ym) return;
+    entries = list; render();
+  }
+
+  function render(){
+    let inc=0, exp=0;
+    for (const e of entries) e.type==="inc" ? inc+=e.amount : exp+=e.amount;
+    // Plastik va naqd: daromad qo'shiladi, xarajat ayriladi; qarz berilsa/qaytarilsa pul chiqadi, olinsa/qaytarib berilsa kiradi
+    const w = {k:0, c:0};
+    for (const e of entries) w[e.pm==="k"?"k":"c"] += e.type==="inc" ? e.amount : -e.amount;
+    for (const p of people) for (const o of p.ops) if (o[5]!=="a" && o[1].slice(0,7)===ym) w[o[5]==="k"?"k":"c"] -= OPS[o[2]].s * o[3];
+    const sgn = v => (v<0?"−":"")+fmt(Math.abs(v));
+    $("w-card").textContent = sgn(w.k); $("w-card").className = "num" + (w.k<0?" exp":"");
+    $("w-cash").textContent = sgn(w.c); $("w-cash").className = "num" + (w.c<0?" exp":"");
+    const bal = w.k + w.c;
+    $("bal").textContent = (bal<0?"−":"")+fmt(Math.abs(bal))+" so'm";
+    $("bal").className = "bal num" + (bal<0?" exp":"");
+    $("sum-inc").textContent = "+"+fmt(inc);
+    $("sum-exp").textContent = "−"+fmt(exp);
+
+    // Shu oydagi qarz yozuvlari ham ro'yxatda ko'rinadi (oy qoldig'iga qo'shilmaydi)
+    const rows = entries.map(e => ({k:"e", date:e.date, id:e.id, e}));
+    for (const p of people) for (const o of p.ops) if (o[5]!=="a" && o[1].slice(0,7)===ym) rows.push({k:"d", date:o[1], id:o[0], p, o});
+    if (!rows.length){
+      $("view-list").innerHTML = '<div class="empty">Bu oyda hali yozuv yo\'q.<br>Pastdagi tugmalar orqali daromad, xarajat yoki qarzni qo\'shing.</div>';
+    } else {
+      rows.sort((a,b)=> b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+      let html="", last="";
+      for (const r of rows){
+        if (r.date!==last){ last=r.date; html += `<div class="day">${dmy(r.date)}</div>`; }
+        if (r.k === "e"){
+          const e = r.e, c = catInfo(e.cat);
+          html += `<button class="item" data-id="${e.id}">
+            <div class="ico">${c.ic}</div>
+            <div class="t"><div>${esc(c.n)}</div>${e.note?`<small>${esc(e.note)}</small>`:""}</div>
+            <div class="a num ${e.type}">${e.type==="inc"?"+":"−"}${fmt(e.amount)}<span class="pmtag">${pmLabel(e.pm)}</span></div></button>`;
+        } else {
+          const o = r.o;
+          html += `<button class="item" data-person-open="${r.p.id}">
+            <div class="ico">👤</div>
+            <div class="t"><div>${esc(r.p.name)} · ${OPS[o[2]].n.toLowerCase()}</div>${o[4]?`<small>${esc(o[4])}</small>`:'<small>qarz</small>'}</div>
+            <div class="a num dbt">${fmt(o[3])}<span class="pmtag">${pmLabel(o[5]||"c")}</span></div></button>`;
+        }
+      }
+      $("view-list").innerHTML = html;
+    }
+    renderSeg();
+    schedulePush();
+  }
+
+  function renderSeg(){
+    document.querySelectorAll("[data-seg]").forEach(b => b.setAttribute("aria-pressed", b.dataset.seg===seg));
+    if (seg === "debt") return renderPeople();
+    const total = entries.filter(e=>e.type===seg).reduce((s,e)=>s+e.amount,0);
+    const by = {}; for (const e of entries) if (e.type===seg) by[e.cat]=(by[e.cat]||0)+e.amount;
+    // Faol toifalar + shu oyda yozuvi bor o'chirilgan/eski toifalar
+    const ids = liveCats(seg).map(c=>c[0]);
+    for (const id in by) if (!ids.includes(id)) ids.push(id);
+    ids.sort((a,b)=>(by[b]||0)-(by[a]||0));
+    const word = seg==="exp" ? "xarajat" : "daromad";
+    let html = `<div class="seg-total"><span class="muted">Shu oy jami ${word}</span><b class="num ${seg}">${fmt(total)} so'm</b></div><div class="grid">`;
+    ids.forEach((id,i) => {
+      const c = catInfo(id), v = by[id]||0, p = total ? v/total*100 : 0;
+      html += `<button class="tile${v?"":" zero"}" data-cat-id="${id}">
+        <div class="ti"><span>${c.ic}</span><span>${esc(c.n)}</span></div>
+        <div class="tv num ${v?seg:""}">${fmt(v)}</div>
+        <div class="bar"><i style="width:${p}%;background:${COLORS[i%COLORS.length]}"></i></div>
+        <div class="tp">${v ? p.toFixed(0)+"%" : "bu oyda yo'q"}</div></button>`;
+    });
+    html += `<button class="tile add" data-new-cat="${seg}">+ ${seg==="exp"?"Toifa qo'shish":"Daromad kartochkasi"}</button></div>`;
+    $("seg-body").innerHTML = html;
+  }
+
+  // ---------- Toifa / daromad kartochkasi oynasi ----------
+  let cform = {type:"exp", id:null, icon:"📌", thenEntry:false};
+  function drawIcons(){
+    $("c-icons").innerHTML = ICONS.map(i => `<button type="button" data-icon="${i}" aria-pressed="${i===cform.icon}">${i}</button>`).join("");
+  }
+  function showCat(type, id, thenEntry){
+    const c = id ? cats[type].find(x=>x[0]===id) : null;
+    cform = {type, id: c ? id : null, icon: c ? c[1] : (type==="exp"?"📌":"💰"), thenEntry: !!thenEntry};
+    const word = type==="exp" ? "toifa" : "daromad kartochkasi";
+    $("c-title").textContent = c ? c[2] : (type==="exp" ? "Yangi xarajat toifasi" : "Yangi daromad kartochkasi");
+    $("c-name").value = c ? c[2] : "";
+    $("c-name").placeholder = type==="exp" ? "Masalan: Onam uchun" : "Masalan: Saodat oyligi";
+    $("c-addentry").hidden = !c;
+    $("c-addentry").textContent = type==="exp" ? "Shu toifaga xarajat yozish" : "Shu kartochkaga daromad yozish";
+    $("c-del").hidden = !c;
+    $("c-del").textContent = "O'chirish";
+    $("c-err").textContent = "";
+    drawIcons();
+    $("csheet").hidden = false;
+    if (!c) setTimeout(()=> $("c-name").focus(), 50);
+  }
+  const hideCat = () => { $("csheet").hidden = true; };
+  $("c-icons").addEventListener("click", e => { const b=e.target.closest("[data-icon]"); if (b){ cform.icon=b.dataset.icon; drawIcons(); } });
+  $("c-close").onclick = hideCat;
+  $("csheet").addEventListener("click", e => { if (e.target.id==="csheet") hideCat(); });
+  onSave("cform", async e => {
+    e.preventDefault();
+    const name = $("c-name").value.trim().slice(0,30);
+    if (!name){ $("c-err").textContent = "Nomini kiriting."; return; }
+    const dup = liveCats(cform.type).find(c => c[2].toLowerCase()===name.toLowerCase() && c[0]!==cform.id);
+    if (dup){ $("c-err").textContent = "Bunday nom allaqachon bor."; return; }
+    let id = cform.id;
+    if (id){ const c = cats[cform.type].find(x=>x[0]===id); c[1]=cform.icon; c[2]=name; }
+    else { id = "c"+newId(); cats[cform.type].push([id, cform.icon, name]); }
+    try { await saveCats(); haptic("success"); } catch(_){ $("c-err").textContent = "Saqlanmadi. Internetni tekshiring."; return; }
+    hideCat(); render();
+    if (cform.thenEntry){ form.cat = id; drawChips(); $("sheet").hidden = false; }
+  });
+  $("c-addentry").onclick = () => { const t=cform.type, id=cform.id; hideCat(); showForm(t, null, id); };
+  armDelete($("c-del"), "O'chirish", async () => {
+    // Eski yozuvlar nomini yo'qotmasligi uchun toifa butunlay o'chmaydi, faqat yashiriladi
+    const c = cats[cform.type].find(x=>x[0]===cform.id); if (c) c[3] = 1;
+    try { await saveCats(); haptic("success"); } catch(_){ haptic("error"); }
+    hideCat(); render();
+  });
+  $("seg-body").addEventListener("click", e => {
+    const n = e.target.closest("[data-new-cat]"); if (n) return showCat(n.dataset.newCat);
+    const t = e.target.closest("[data-cat-id]");
+    if (t){ const id=t.dataset.catId; if (cats[seg].some(c=>c[0]===id && !c[3])) showCat(seg, id); else showForm(seg, null, id); return; }
+    if (e.target.closest("[data-archive]")) return showArchive();
+    const np = e.target.closest("[data-new-person]"); if (np) return showPerson(null);
+    const p = e.target.closest("[data-person-id]"); if (p) return showPerson(p.dataset.personId);
+  });
+
+  // ---------- Qarzdorlar ----------
+  const balance = p => p.ops.reduce((s,o)=> s + OPS[o[2]].s*o[3], 0); // >0: menga qarzdor, <0: men qarzdorman
+  function renderPeople(){
+    let owed=0, owe=0;
+    for (const p of people){ const b = balance(p); if (b>0) owed+=b; else owe-=b; }
+    let html = `<div class="row2" style="margin-bottom:14px">
+      <div class="pill"><small>Menga qaytarishadi</small><span class="num inc">${fmt(owed)}</span></div>
+      <div class="pill"><small>Men qaytarishim kerak</small><span class="num exp">${fmt(owe)}</span></div></div>
+      <button class="archbtn" data-archive="1"><span>🗄 Arxiv</span><span class="muted">${archCount()} ta eski qarz ›</span></button><div class="grid">`;
+    const sorted = [...people].sort((a,b)=> Math.abs(balance(b))-Math.abs(balance(a)) || a.name.localeCompare(b.name));
+    for (const p of sorted){
+      const b = balance(p), last = p.ops.length ? p.ops.reduce((m,o)=>o[1]>m?o[1]:m,"") : "";
+      html += `<button class="tile${b?"":" zero"}" data-person-id="${p.id}">
+        <div class="ti"><span>👤</span><span>${esc(p.name)}</span></div>
+        <div class="tv num ${b>0?"inc":b<0?"exp":""}">${fmt(Math.abs(b))}</div>
+        <div class="tp">${b>0?"menga qarzdor":b<0?"men qarzdorman":"hisob-kitob yo'q"}${last?" · "+dmy(last):""}</div></button>`;
+    }
+    html += `<button class="tile add" data-new-person="1">+ Qarzdor qo'shish</button></div>`;
+    $("seg-body").innerHTML = html;
+  }
+
+  let pform = {id:null, op:"give"};
+  const drawOpChips = () => document.querySelectorAll("[data-op]").forEach(x => x.setAttribute("aria-pressed", x.dataset.op===pform.op));
+  function drawPerson(){
+    drawOpChips();
+    const p = people.find(x=>x.id===pform.id);
+    $("p-balbox").hidden = !p;
+    if (!p){ $("p-hist").innerHTML = ""; return; }
+    const b = balance(p);
+    $("p-title").textContent = p.name;
+    $("p-bal").textContent = fmt(Math.abs(b))+" so'm";
+    $("p-bal").className = "num " + (b>0?"inc":b<0?"exp":"");
+    $("p-bal-l").textContent = b>0 ? p.name+" sizga qarzdor" : b<0 ? "Siz "+p.name+"ga qarzdorsiz" : "Hisob-kitob teng";
+    const ops = [...p.ops].sort((a,b)=> b[1].localeCompare(a[1]) || b[0].localeCompare(a[0]));
+    $("p-hist").innerHTML = ops.length ? '<div class="lbl" style="margin-top:6px">Tarix</div>' + ops.map(o => `<div class="item">
+      <div class="t"><div>${OPS[o[2]].n}</div><small>${dmy(o[1])} · ${pmLabel(o[5]||"c")}${o[4]?" · "+esc(o[4]):""}</small></div>
+      <div class="a num ${OPS[o[2]].s>0?"inc":"exp"}">${fmt(o[3])}</div>
+      <button type="button" class="x" data-del-op="${o[0]}" aria-label="O'chirish">×</button></div>`).join("") : "";
+  }
+  function showPerson(id){
+    const p = id ? people.find(x=>x.id===id) : null;
+    pform = {id: p ? id : null, op:"give"};
+    $("p-title").textContent = p ? p.name : "Yangi qarzdor";
+    $("p-name").value = p ? p.name : "";
+    $("p-op-l").textContent = p ? "Yangi yozuv" : "Qarz yozish (ixtiyoriy)";
+    $("p-del").hidden = !p;
+    $("p-amount").value = ""; $("p-note").value = ""; setPm("p", lastPm()); $("p-opdate").value = today(); $("p-err").textContent = "";
+    drawPerson();
+    $("psheet").hidden = false;
+    if (!p) setTimeout(()=> $("p-name").focus(), 50);
+  }
+  const hidePerson = () => { $("psheet").hidden = true; };
+  $("p-close").onclick = hidePerson;
+  $("psheet").addEventListener("click", e => { if (e.target.id==="psheet") hidePerson(); });
+  $("p-kinds").addEventListener("click", e => { const b=e.target.closest("[data-op]"); if (b){ pform.op=b.dataset.op; drawOpChips(); } });
+  async function persist(errEl){
+    try { await savePeople(); haptic("success"); return true; }
+    catch(_){ errEl.textContent = "Saqlanmadi. Qayta urinib ko'ring."; haptic("error"); return false; }
+  }
+  // Bitta "Saqlash": ismni saqlaydi va summa yozilgan bo'lsa, qarz yozuvini ham qo'shadi
+  onSave("pform", async e => {
+    e.preventDefault();
+    const name = $("p-name").value.trim().slice(0,30);
+    const amount = num($("p-amount").value);
+    const date = $("p-opdate").value || today();
+    if (!name){ $("p-err").textContent = "Ismni kiriting."; return; }
+    if (people.some(p => p.name.toLowerCase()===name.toLowerCase() && p.id!==pform.id)){ $("p-err").textContent = "Bu ism allaqachon bor."; return; }
+    let p = people.find(x=>x.id===pform.id);
+    if (p) p.name = name; else { p = {id:"p"+newId(), name, ops:[]}; people.push(p); }
+    if (amount) p.ops.push(["o"+newId(), date, pform.op, amount, $("p-note").value.trim().slice(0,60), usePm("p")]);
+    if (await persist($("p-err"))){ hidePerson(); render(); }
+  });
+  $("p-hist").addEventListener("click", async e => {
+    const b = e.target.closest("[data-del-op]"); if (!b) return;
+    if (b.dataset.armed !== "1"){ b.dataset.armed = "1"; b.textContent = "o'chirish?"; b.style.fontSize="13px"; return; }
+    const p = people.find(x=>x.id===pform.id);
+    p.ops = p.ops.filter(o => o[0]!==b.dataset.delOp);
+    if (await persist($("p-err"))){ drawPerson(); render(); }
+  });
+  armDelete($("p-del"), "Qarzdorni o'chirish", async () => {
+    people = people.filter(x => x.id!==pform.id);
+    await persist($("p-err")); hidePerson(); render();
+  });
+
+  // ---------- Arxiv ----------
+  const archCount = () => people.reduce((n,p)=> n + p.ops.filter(o=>o[5]==="a").length, 0);
+  let aform = {pid:null, op:"take", isNew:false};
+  function drawArchive(){
+    $("a-people").innerHTML = people.map(p => `<button type="button" data-ap="${p.id}" aria-pressed="${!aform.isNew && p.id===aform.pid}">👤 ${esc(p.name)}</button>`).join("")
+      + `<button type="button" class="new" data-anew="1" aria-pressed="${aform.isNew}">+ Yangi ism</button>`;
+    $("a-newname-l").hidden = !aform.isNew;
+    document.querySelectorAll("[data-aop]").forEach(x => x.setAttribute("aria-pressed", x.dataset.aop===aform.op));
+    const rows = [];
+    for (const p of people) for (const o of p.ops) if (o[5]==="a") rows.push({p,o});
+    rows.sort((a,b)=> b.o[1].localeCompare(a.o[1]));
+    $("a-list").innerHTML = rows.length ? '<div class="lbl" style="margin-top:6px">Arxivdagi qarzlar</div>' + rows.map(({p,o}) => `<div class="item">
+      <div class="t"><div>${esc(p.name)} · ${o[2]==="take"?"men olganman":"men berganman"}</div><small>${dmy(o[1])}${o[4]?" · "+esc(o[4]):""}</small></div>
+      <div class="a num ${o[2]==="take"?"exp":"inc"}">${fmt(o[3])}</div>
+      <button type="button" class="x" data-adel="${p.id}|${o[0]}" aria-label="O'chirish">×</button></div>`).join("") : "";
+  }
+  function showArchive(){
+    aform = {pid: null, op:"take", isNew: !people.length};
+    $("a-amount").value = ""; $("a-note").value = ""; $("a-newname").value = ""; $("a-date").value = today(); $("a-err").textContent = "";
+    drawArchive(); $("asheet").hidden = false;
+  }
+  const hideArchive = () => { $("asheet").hidden = true; };
+  $("a-close").onclick = hideArchive;
+  $("asheet").addEventListener("click", e => { if (e.target.id==="asheet") hideArchive(); });
+  $("a-people").addEventListener("click", e => {
+    if (e.target.closest("[data-anew]")){ aform.isNew = true; aform.pid = null; drawArchive(); setTimeout(()=>$("a-newname").focus(),30); return; }
+    const b = e.target.closest("[data-ap]"); if (b){ aform.isNew = false; aform.pid = b.dataset.ap; drawArchive(); }
+  });
+  $("a-ops").addEventListener("click", e => { const b=e.target.closest("[data-aop]"); if (b){ aform.op=b.dataset.aop; drawArchive(); } });
+  $("a-list").addEventListener("click", async e => {
+    const b = e.target.closest("[data-adel]"); if (!b) return;
+    if (b.dataset.armed !== "1"){ b.dataset.armed = "1"; b.textContent = "o'chirish?"; b.style.fontSize="13px"; return; }
+    const [pid, oid] = b.dataset.adel.split("|");
+    const p = people.find(x=>x.id===pid); if (p) p.ops = p.ops.filter(o => o[0]!==oid);
+    if (await persist($("a-err"))){ drawArchive(); render(); }
+  });
+  onSave("aform", async e => {
+    const amount = num($("a-amount").value);
+    let p = null;
+    if (aform.isNew){
+      const name = $("a-newname").value.trim().slice(0,30);
+      if (!name){ $("a-err").textContent = "Ismni kiriting."; return; }
+      p = people.find(x => x.name.toLowerCase()===name.toLowerCase());
+      if (!p){ p = {id:"p"+newId(), name, ops:[]}; people.push(p); }
+    } else {
+      p = people.find(x=>x.id===aform.pid);
+      if (!p){ $("a-err").textContent = "Kim bilan ekanini tanlang."; return; }
+    }
+    if (!amount){ $("a-err").textContent = "Summani kiriting."; return; }
+    p.ops.push(["o"+newId(), $("a-date").value || today(), aform.op, amount, $("a-note").value.trim().slice(0,60), "a"]);
+    if (await persist($("a-err"))){
+      haptic("success");
+      aform = {pid: p.id, op: aform.op, isNew: false};
+      $("a-amount").value = ""; $("a-note").value = ""; $("a-newname").value = ""; $("a-err").textContent = "";
+      drawArchive(); render();
+    }
+  });
+
+  // ---------- Amallar bo'limidagi tezkor "Qarz" tugmasi ----------
+  let qform = {pid:null, op:"give"};
+  function drawQ(){
+    $("q-people").innerHTML = people.map(p => `<button type="button" data-qp="${p.id}" aria-pressed="${p.id===qform.pid}">👤 ${esc(p.name)}</button>`).join("")
+      + `<button type="button" class="new" data-qnew="1">+ Yangi qarzdor</button>`;
+    document.querySelectorAll("[data-qop]").forEach(x => x.setAttribute("aria-pressed", x.dataset.qop===qform.op));
+  }
+  function showQuick(){
+    qform = {pid: people.length===1 ? people[0].id : null, op:"give"};
+    $("q-amount").value = ""; $("q-note").value = ""; setPm("q", lastPm()); $("q-date").value = today(); $("q-err").textContent = "";
+    drawQ(); $("qsheet").hidden = false;
+  }
+  const hideQuick = () => { $("qsheet").hidden = true; };
+  $("add-debt").onclick = showQuick;
+  $("q-close").onclick = hideQuick;
+  $("qsheet").addEventListener("click", e => { if (e.target.id==="qsheet") hideQuick(); });
+  $("q-people").addEventListener("click", e => {
+    if (e.target.closest("[data-qnew]")){ hideQuick(); showPerson(null); return; }
+    const b = e.target.closest("[data-qp]"); if (b){ qform.pid = b.dataset.qp; drawQ(); }
+  });
+  $("q-ops").addEventListener("click", e => { const b=e.target.closest("[data-qop]"); if (b){ qform.op=b.dataset.qop; drawQ(); } });
+  onSave("qform", async e => {
+    e.preventDefault();
+    const p = people.find(x=>x.id===qform.pid);
+    const amount = num($("q-amount").value);
+    if (!p){ $("q-err").textContent = people.length ? "Kim bilan ekanini tanlang." : "Avval «+ Yangi qarzdor» orqali ism qo'shing."; return; }
+    if (!amount){ $("q-err").textContent = "Summani kiriting."; return; }
+    p.ops.push(["o"+newId(), $("q-date").value || today(), qform.op, amount, $("q-note").value.trim().slice(0,60), usePm("q")]);
+    if (await persist($("q-err"))){ hideQuick(); render(); }
+  });
+
+  // ---------- Daromad / xarajat yozuvi ----------
+  let form = {type:"exp", cat:null, id:null};
+  function showForm(type, entry, catId){
+    const live = liveCats(type);
+    form = {type, cat: entry ? entry.cat : (catId || (live[0] && live[0][0]) || null), id: entry ? entry.id : null};
+    $("f-title").textContent = (entry?"Tahrirlash · ":"") + (type==="inc"?"Daromad":"Xarajat");
+    $("f-cats-l").textContent = type==="inc" ? "Daromad turi" : "Toifa";
+    $("f-amount").value = entry ? fmt(entry.amount) : "";
+    setPm("f", entry ? entry.pm : lastPm());
+    $("f-note").value = entry ? entry.note : "";
+    $("f-date").value = entry ? entry.date : today();
+    $("f-del").hidden = !entry;
+    $("f-err").textContent = "";
+    drawChips();
+    $("sheet").hidden = false;
+    setTimeout(()=> $("f-amount").focus(), 50);
+  }
+  function drawChips(){
+    const list = liveCats(form.type).map(c=>[c[0],c[1],c[2]]);
+    if (form.cat && !list.some(c=>c[0]===form.cat)){ const c=catInfo(form.cat); list.push([form.cat,c.ic,c.n]); }
+    $("f-cats").innerHTML = list.map(([id,ic,n]) =>
+      `<button type="button" data-cat="${id}" aria-pressed="${id===form.cat}">${ic} ${esc(n)}</button>`).join("")
+      + `<button type="button" class="new" data-newcat="1">+ Yangi</button>`;
+  }
+  const hideForm = () => { $("sheet").hidden = true; };
+  $("f-cats").addEventListener("click", e => {
+    if (e.target.closest("[data-newcat]")){ $("sheet").hidden = true; showCat(form.type, null, true); return; }
+    const b = e.target.closest("[data-cat]"); if (!b) return;
+    form.cat = b.dataset.cat; drawChips();
+  });
+  $("f-close").onclick = hideForm;
+  $("sheet").addEventListener("click", e => { if (e.target.id==="sheet") hideForm(); });
+
+  let busy = false;
+  onSave("form", async e => {
+    e.preventDefault(); if (busy) return;
+    const amount = num($("f-amount").value);
+    const date = $("f-date").value;
+    if (!amount){ $("f-err").textContent = "Summani kiriting."; return; }
+    if (!form.cat){ $("f-err").textContent = "Toifani tanlang yoki yangisini qo'shing."; return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ $("f-err").textContent = "Sanani tanlang."; return; }
+    const rec = {id: form.id || newId(), type: form.type, amount, cat: form.cat, date, note: $("f-note").value.trim().slice(0,60), pm: usePm("f")};
+    busy = true;
+    try{
+      if (form.id){ entries = entries.filter(x => x.id!==form.id); }
+      const target = date.slice(0,7);
+      if (target === ym){ entries.push(rec); await saveMonth(ym, entries); }
+      else {
+        if (form.id) await saveMonth(ym, entries);
+        const other = await loadMonth(target); other.push(rec); await saveMonth(target, other);
+      }
+      haptic("success"); hideForm(); render();
+    } catch(_){
+      $("f-err").textContent = "Saqlanmadi. Internetni tekshirib, qayta urinib ko'ring.";
+      haptic("error"); await open();
+    } finally { busy = false; }
+  });
+  armDelete($("f-del"), "O'chirish", async () => {
+    entries = entries.filter(x => x.id!==form.id);
+    try { await saveMonth(ym, entries); haptic("success"); } catch(_){ haptic("error"); }
+    hideForm(); render();
+  });
+
+  // ---------- Boshqa hodisalar ----------
+  document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => showForm(b.dataset.add));
+  $("view-list").addEventListener("click", e => {
+    const po = e.target.closest("[data-person-open]"); if (po) return showPerson(po.dataset.personOpen);
+    const b = e.target.closest("[data-id]"); if (!b) return;
+    const en = entries.find(x => x.id===b.dataset.id); if (en) showForm(en.type, en);
+  });
+  document.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => {
+    tab = b.dataset.tab;
+    document.querySelectorAll("[data-tab]").forEach(x => x.setAttribute("aria-selected", x===b));
+    $("view-list").hidden = tab!=="list"; $("view-cats").hidden = tab!=="cats";
+    renderSeg();
+  });
+  document.querySelectorAll("[data-seg]").forEach(b => b.onclick = () => { seg = b.dataset.seg; renderSeg(); });
+  $("prev").onclick = () => shiftMonth(-1);
+  $("next").onclick = () => shiftMonth(1);
+
+  // ---------- Kunlik hisobot uchun serverga yuborish ----------
+  // Faqat jami summalar yuboriladi (izohlar va qarzdor ismlari yuborilmaydi).
+  const canReport = !!(tg && tg.initData && location.protocol === "https:");
+  async function buildSummary(){
+    const t = today(), tm = t.slice(0,7);
+    const list = ym === tm ? entries : await loadMonth(tm);
+    let inc=0, exp=0, count=0; const byCat = {};
+    const w = {k:0, c:0};
+    for (const e of list){
+      w[e.pm==="k"?"k":"c"] += e.type==="inc" ? e.amount : -e.amount;
+      if (e.date !== t) continue;
+      count++;
+      if (e.type==="inc") inc += e.amount; else { exp += e.amount; byCat[e.cat] = (byCat[e.cat]||0) + e.amount; }
+    }
+    const debt = {give:0, back_in:0, take:0, back_out:0};
+    let owed=0, owe=0;
+    for (const p of people){
+      const b = balance(p); if (b>0) owed+=b; else owe-=b;
+      for (const o of p.ops){
+        if (o[5]==="a") continue;
+        if (o[1].slice(0,7)===tm) w[o[5]==="k"?"k":"c"] -= OPS[o[2]].s * o[3];
+        if (o[1]===t){ debt[o[2]] += o[3]; count++; }
+      }
+    }
+    const cats = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([id,v]) => [catInfo(id).n, v]);
+    return {date:t, inc, exp, count, cats, debt, card:w.k, cash:w.c, bal:w.k+w.c, owed, owe};
+  }
+  async function pushSummary(send){
+    if (!canReport) return;
+    const r = await fetch("/api/summary", {method:"POST", headers:{"content-type":"application/json"},
+      body: JSON.stringify({initData: tg.initData, summary: await buildSummary(), send: !!send})});
+    const j = await r.json().catch(()=>({ok:false, error:"Server javob bermadi ("+r.status+")"}));
+    if (!j.ok) throw new Error(j.error || "Xato");
+  }
+  let pushT = null;
+  function schedulePush(){
+    if (!canReport) return;
+    clearTimeout(pushT);
+    pushT = setTimeout(() => pushSummary(false).catch(()=>{}), 1500);
+  }
+  if (canReport){
+    const btn = $("send-now"); btn.hidden = false;
+    btn.onclick = async () => {
+      btn.disabled = true; btn.textContent = "Yuborilmoqda…";
+      try { await pushSummary(true); haptic("success"); btn.textContent = "✅ Yuborildi — bot chatiga qarang"; }
+      catch(e){ haptic("error"); toast(e.message); btn.textContent = "📩 Bugungi hisobotni botga yuborish"; }
+      setTimeout(()=>{ btn.disabled = false; btn.textContent = "📩 Bugungi hisobotni botga yuborish"; }, 4000);
+    };
+  }
+
+  // ---------- Ishga tushirish ----------
+  (async () => {
+    const c = await loadRaw("cats", null);
+    cats = (c && c.exp) ? c : JSON.parse(JSON.stringify(DEFAULT_CATS));
+    people = (await loadRaw("ppl", [])).map(r => ({id:r[0], name:r[1], ops:r[2]||[]}));
+    if (!people.length){
+      // Oldingi versiyadagi qarzlarni qarzdorlar ro'yxatiga ko'chiramiz
+      const old = await loadRaw("debt", []);
+      if (old.length){
+        const byName = {};
+        for (const r of old){
+          const [id,kind,name,amount,date,,note,pays] = r;
+          const key = String(name).trim(); const p = byName[key] || (byName[key] = {id:"p"+newId(), name:key, ops:[]});
+          p.ops.push(["o"+id, date, kind==="lent"?"give":"take", amount, note||""]);
+          (pays||[]).forEach((pp,i) => p.ops.push(["o"+id+"_"+i, pp[0], kind==="lent"?"back_in":"back_out", pp[1], ""]));
+        }
+        people = Object.values(byName);
+        try { await savePeople(); await saveRaw("debt", []); } catch(_){}
+      }
+    }
+    open();
+  })();
+})();
+</script>
+</body>
+</html>
