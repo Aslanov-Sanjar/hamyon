@@ -174,7 +174,7 @@ input:focus{outline:none;border-color:var(--accent)}
     <div id="seg-body"></div>
   </div>
   <button class="alt" id="send-now" hidden>📩 Bugungi hisobotni botga yuborish</button>
-  <div class="ver" id="ver">Hamyon · versiya 8</div>
+  <div class="ver" id="ver">Hamyon · versiya 9</div>
 </div>
 
 <div class="fab" id="fab-money">
@@ -379,7 +379,12 @@ input:focus{outline:none;border-color:var(--accent)}
     if (!t){ t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
     t.textContent = msg; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(()=> t.hidden = true, 6000);
   };
-  window.addEventListener("error", e => toast("Xato: " + (e.message || "noma'lum")));
+  // Boshqa saytdagi skript (masalan Telegram'ning o'zi) xatosi "Script error." bo'lib keladi — u bizga tegishli emas, ko'rsatmaymiz
+  window.addEventListener("error", e => {
+    const msg = e.message || "";
+    if (!msg || /^Script error\.?$/i.test(msg) || !e.lineno) { console.warn("Tashqi xato:", msg); return; }
+    toast("Xato: " + msg);
+  });
   window.addEventListener("unhandledrejection", e => toast("Xato: " + ((e.reason && e.reason.message) || e.reason || "noma'lum")));
   // "Saqlash" tugmasi: bosilganda ham, Enter bosilganda ham ishlaydi; xato bo'lsa ko'rsatadi
   function onSave(formId, fn){
